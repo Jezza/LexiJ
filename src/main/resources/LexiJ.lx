@@ -1,0 +1,51 @@
+// Implicit declarations
+alpha_lower := [a-z]
+alpha_upper := [A-Z]
+alpha := [ALPHA_LOWER|ALPHA_UPPER]
+
+NUM := [0-9]
+
+HEX := [NUM|a|b|c|d|e|f|A|B|C|D|E|F]
+
+ALPHA_NUM := [ALPHA|NUM]
+
+// Start of file
+name("Testing") // Generates file name: "Testing.java"
+buffers(1) // Creates 1 buffer than can be used throughout the lexer.
+
+import {
+	java.util[Objects, ArrayList]
+}
+
+inject {
+	static {
+		System.out.print("ASdasdasd");
+	}
+}
+
+NAMESPACE -> alpha
+NUMBER -> num
+
+COLON_EQUAL -> ":="
+LEFT -> '['
+PIPE -> '|'
+RIGHT -> ']'
+
+initial {
+ 	'"' {
+ 		buffer[0].clear();
+ 		start("string")
+ 	}
+	default {
+		print("Fallthrough")
+	}
+}
+
+string {
+	'"' {
+		symbol(STRING, buffer[0])
+	}
+	default {
+		buffer[0].append(current())
+	}
+}

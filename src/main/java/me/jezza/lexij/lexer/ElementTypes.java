@@ -14,17 +14,24 @@ public final class ElementTypes {
 	public static final byte NAMESPACE = 1; // a block of characters with no defined meaning.
 	public static final byte NUMBER = 2; // 1
 	public static final byte STRING = 3; // "
-	public static final byte COMMENT = 4; // Line or block comments.
+	public static final byte CHAR = 4; // '
+	public static final byte COMMENT = 5; // Line or block comments
+	public static final byte WHITESPACE = 6; // Whitespace
+	public static final byte NEW_LINE = 7; // New line
 
 	// Method stuff
-	public static final byte BRACE_L = 10; // {
-	public static final byte BRACE_R = 11; // }
-	public static final byte PARENTHESIS_L = 12; // (
-	public static final byte PARENTHESIS_R = 13; // )
-	public static final byte BRACKET_L = 14; // [
-	public static final byte BRACKET_R = 15; // ]
+	public static final byte LEFT_BRACE = 10; // {
+	public static final byte RIGHT_BRACE = 11; // }
+	public static final byte LEFT_PARENTHESIS = 12; // (
+	public static final byte RIGHT_PARENTHESIS = 13; // )
+	public static final byte LEFT_BRACKET = 14; // [
+	public static final byte RIGHT_BRACKET = 15; // ]
 
-	public static final byte COLON_EQUAL = 20; // :
+	public static final byte COLON_EQUAL = 20; // :=
+	public static final byte RIGHT_ARROW = 21; // ->
+	public static final byte LEFT_ARROW = 22; // <-
+	public static final byte DASH = 23; // -
+	public static final byte COMMA = 24; // ,
 
 //	public static final byte COLON = 20; // :
 //	public static final byte QUESTION = 21; // ?

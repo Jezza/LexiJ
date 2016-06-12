@@ -1,30 +1,42 @@
 package me.jezza.lexij.lexer;
 
 import static me.jezza.lexij.lexer.ElementTypes.NAMESPACE;
+import static me.jezza.lexij.lib.Strings.format;
 
 import java.util.NoSuchElementException;
 
 /**
+ * TODO: Revisit
+ *
  * @author jezza
  * @date 4/12/2015
  */
 public final class LexNavigator {
+	private static final int UNSET = -2;
 
 	private final char[] dataBuffer;
 	private final ElementBuffer elementBuffer;
 	private int elementIndex;
 
-	private final int startIndex;
+	private int mark = UNSET;
 
 	public LexNavigator(final char[] dataBuffer, final ElementBuffer elementBuffer) {
-		this(dataBuffer, elementBuffer, -1);
-	}
-
-	public LexNavigator(final char[] dataBuffer, final ElementBuffer elementBuffer, final int startingIndex) {
 		this.dataBuffer = dataBuffer;
 		this.elementBuffer = elementBuffer;
-		elementIndex = startingIndex;
-		startIndex = startingIndex;
+		elementIndex = -1;
+	}
+
+	public void mark() {
+		mark = elementIndex;
+	}
+
+	public void reset() {
+		elementIndex = mark;
+		mark = UNSET;
+	}
+
+	public int size() {
+		return elementBuffer.size;
 	}
 
 	public boolean hasNext() {
@@ -32,9 +44,8 @@ public final class LexNavigator {
 	}
 
 	public LexNavigator next() {
-		if (!hasNext()) {
+		if (!hasNext())
 			throw new NoSuchElementException();
-		}
 		elementIndex++;
 		return this;
 	}
@@ -44,23 +55,10 @@ public final class LexNavigator {
 	}
 
 	public LexNavigator previous() {
-		if (!hasPrevious()) {
+		if (!hasPrevious())
 			throw new NoSuchElementException();
-		}
 		elementIndex--;
 		return this;
-	}
-
-	public int index() {
-		return elementIndex;
-	}
-
-	public int size() {
-		return elementBuffer.size;
-	}
-
-	public void resetPosition() {
-		elementIndex = startIndex;
 	}
 
 	public int position() {
@@ -75,28 +73,13 @@ public final class LexNavigator {
 		return elementBuffer.type[elementIndex];
 	}
 
-	public String cursorPosition() {
-		int line = 1;
-		int index = 0;
-
-		for (int i = 0; i < position(); i++) {
-			if (dataBuffer[i] == LexReader.NEW_LINE) {
-				line++;
-				index = 0;
-			} else {
-				index++;
-			}
-		}
-
-		return String.format("Line #%s, Char #%s", Integer.toString(line), Integer.toString(index));
-	}
-
-	public boolean isEqual(final String target) {
+	public boolean is(final String target) {
+		char[] dataBuffer = this.dataBuffer;
 		final int pos = position();
-		for (int j = 0; j < length(); j++) {
-			if (target.charAt(j) != dataBuffer[pos + j]) {
+		int length = length();
+		for (int j = 0; j < length; j++) {
+			if (target.charAt(j) != dataBuffer[pos + j])
 				return false;
-			}
 		}
 		return true;
 	}
@@ -169,8 +152,8 @@ public final class LexNavigator {
 	/**
 	 * @return the number of components that reside inside of a function call.
 	 */
-//	public int countFunctionComponents() {
-//		int count = 0;
+	public int countFunctionComponents() {
+		int count = 0;
 //		int tempIndex = elementIndex + 1;
 //		byte type = elementBuffer.type[tempIndex];
 //		while (type != FUNCTION_END) {
@@ -184,8 +167,21 @@ public final class LexNavigator {
 //			count++;
 //			type = elementBuffer.type[++tempIndex];
 //		}
-//		return count;
-//	}
+		return count;
+	}
+
+	public String asString() {
+		final int pos = position();
+		final int length = length();
+		final StringBuilder builder = new StringBuilder(length);
+		for (int j = 0; j < length; j++)
+			builder.append(dataBuffer[pos + j]);
+		return builder.toString();
+	}
+
+	public boolean asBoolean() {
+		return type() == NAMESPACE && Boolean.parseBoolean(asString());
+	}
 
 	public String typeString() {
 		switch (type()) {
@@ -195,24 +191,36 @@ public final class LexNavigator {
 				return "NUMBER";
 			case ElementTypes.STRING:
 				return "STRING";
+			case ElementTypes.CHAR:
+				return "CHAR";
 			case ElementTypes.COMMENT:
 				return "COMMENT";
+			case ElementTypes.WHITESPACE:
+				return "WHITESPACE";
+			case ElementTypes.NEW_LINE:
+				return "NEW_LINE";
 			//
-			case ElementTypes.BODY_START:
-				return "BODY_START";
-			case ElementTypes.BODY_END:
-				return "BODY_END";
-			case ElementTypes.FUNCTION_START:
-				return "FUNCTION_START";
-			case ElementTypes.FUNCTION_END:
-				return "FUNCTION_END";
-			case ElementTypes.ARRAY_START:
-				return "ARRAY_START";
-			case ElementTypes.ARRAY_END:
-				return "ARRAY_END";
+			case ElementTypes.LEFT_BRACE:
+				return "LEFT_BRACE";
+			case ElementTypes.RIGHT_BRACE:
+				return "RIGHT_BRACE";
+			case ElementTypes.LEFT_PARENTHESIS:
+				return "LEFT_PARENTHESIS";
+			case ElementTypes.RIGHT_PARENTHESIS:
+				return "RIGHT_PARENTHESIS";
+			case ElementTypes.LEFT_BRACKET:
+				return "LEFT_BRACKET";
+			case ElementTypes.RIGHT_BRACKET:
+				return "RIGHT_BRACKET";
 //			//
 			case ElementTypes.COLON_EQUAL:
 				return "COLON_EQUAL";
+			case ElementTypes.RIGHT_ARROW:
+				return "RIGHT_ARROW";
+			case ElementTypes.LEFT_ARROW:
+				return "LEFT_ARROW";
+			case ElementTypes.DASH:
+				return "DASH";
 //			//
 			case ElementTypes.PIPE:
 				return "PIPE";
@@ -295,16 +303,19 @@ public final class LexNavigator {
 		}
 	}
 
-	public String asString() {
-		final int pos = position();
-		final int length = length();
-		final StringBuilder builder = new StringBuilder(length);
-		for (int j = 0; j < length; j++)
-			builder.append(dataBuffer[pos + j]);
-		return builder.toString();
-	}
-
-	public boolean asBoolean() {
-		return type() == NAMESPACE && Boolean.parseBoolean(asString());
+	public String cursorPosition() {
+		char[] dataBuffer = this.dataBuffer;
+		int pos = position();
+		int line = 1;
+		int index = 0;
+		for (int i = 0; i < pos; i++) {
+			if (dataBuffer[i] == LexReader.NEW_LINE) {
+				line++;
+				index = 0;
+			} else {
+				index++;
+			}
+		}
+		return format("Line #{}, Char #{}", Integer.toString(line), Integer.toString(index));
 	}
 }

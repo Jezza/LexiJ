@@ -55,7 +55,7 @@ public final class LexReader {
 				pos = consumeNamespace();
 				continue;
 			}
-			if (isDigit(c)) {
+			if (isNumber(c)) {
 				pos = consumeNumber();
 				continue;
 			}
@@ -63,40 +63,69 @@ public final class LexReader {
 				case '"':
 					pos = consumeString();
 					break;
+				case '\'':
+					pos = consumeChar();
+					break;
+				case NEW_LINE:
+					elementData(ElementTypes.NEW_LINE);
+					break;
+				case ' ':
+					pos = consumeWhitespace();
+					break;
 				//
 				case '{':
-					elementData(elementIndex++, BRACE_L, pos);
+					elementData(LEFT_BRACE);
 					break;
 				case '}':
-					elementData(elementIndex++, BRACE_R, pos);
+					elementData(RIGHT_BRACE);
 					break;
 				case '(':
-					elementData(elementIndex++, PARENTHESIS_L, pos);
+					elementData(LEFT_PARENTHESIS);
 					break;
 				case ')':
-					elementData(elementIndex++, PARENTHESIS_R, pos);
+					elementData(RIGHT_PARENTHESIS);
 					break;
 				case '[':
-					elementData(elementIndex++, BRACKET_L, pos);
+					elementData(LEFT_BRACKET);
 					break;
 				case ']':
-					elementData(elementIndex++, BRACKET_R, pos);
+					elementData(RIGHT_BRACKET);
 					break;
 				//
 				case ':':
 					if (peek('=')) {
-						elementData(elementIndex++, COLON_EQUAL, pos, 2);
+						elementData(COLON_EQUAL, pos, 2);
+						pos += 2;
 					} else {
-						throw error("ColonEqual shit");
+						throw error("Syntax");
 					}
+					break;
+				case '<':
+					if (peek('-')) {
+						elementData(LEFT_ARROW, pos, 2);
+						pos += 2;
+					} else {
+						throw error("Syntax");
+					}
+					break;
+				case '-':
+					if (peek('>')) {
+						elementData(RIGHT_ARROW, pos, 2);
+						pos += 2;
+					} else {
+						elementData(DASH);
+					}
+					break;
+				case ',':
+					elementData(COMMA);
 					break;
 				//
 				case '/':
-					pos = skipComment();
+					pos = consumeComment();
 					break;
 				//
 				case '|':
-					elementData(elementIndex++, PIPE, pos);
+					elementData(PIPE);
 					break;
 				default:
 			}
@@ -114,17 +143,13 @@ public final class LexReader {
 		char[] dataBuffer = this.dataBuffer;
 		int length = dataBuffer.length;
 		int tempPos = pos;
-		while (++tempPos < length) {
-			if (!isNamespace(dataBuffer[tempPos])) {
-				elementData(elementIndex++, NAMESPACE, pos, tempPos - pos);
-				return tempPos;
-			}
+		while (++tempPos < length && isNamespace(dataBuffer[tempPos])) {
 		}
-		elementData(elementIndex++, NAMESPACE, pos, tempPos - pos);
+		elementData(NAMESPACE, pos, tempPos - pos);
 		return tempPos;
 	}
 
-	private boolean isDigit(char c) {
+	private boolean isNumber(char c) {
 		return Character.isDigit(c);
 	}
 
@@ -132,50 +157,65 @@ public final class LexReader {
 		char[] dataBuffer = this.dataBuffer;
 		int length = dataBuffer.length;
 		int tempPos = pos;
-		while (++tempPos < length) {
-			if (!Character.isDigit(dataBuffer[tempPos])) {
-				elementData(elementIndex++, NUMBER, pos, tempPos - pos);
-				return tempPos;
-			}
+		while (++tempPos < length && isNumber(dataBuffer[tempPos])) {
 		}
-		elementData(elementIndex++, NUMBER, pos, tempPos - pos);
+		elementData(NUMBER, pos, tempPos - pos);
 		return tempPos;
 	}
 
 	private int consumeString() {
 		char[] dataBuffer = this.dataBuffer;
+		int length = dataBuffer.length;
 		int tempPos = pos;
-		while (true) {
-			if (++tempPos >= dataBuffer.length)
-				throw error("Unexpected end of String");
-			switch (dataBuffer[tempPos]) {
-				case '\'':
-				case '"':
-					if (dataBuffer[tempPos - 1] != '\\') {
-						elementData(elementIndex++, STRING, pos, tempPos - pos + 1);
-						return tempPos + 1;
-					}
-					break;
-				default:
+		while (++tempPos < length) {
+			if (dataBuffer[tempPos] == '"' && dataBuffer[tempPos - 1] != '\\') {
+				elementData(STRING, pos, tempPos - pos + 1);
+				return tempPos + 1;
 			}
 		}
+		throw error("Unexpected end of String");
 	}
 
-	private int skipComment() {
-		if (peek('/')) {
-			int tempPos = pos + 1;
-			char[] dataBuffer = this.dataBuffer;
-			int length = dataBuffer.length;
-			while (++tempPos < length) {
-				if (dataBuffer[tempPos] == NEW_LINE) {
-					elementData(elementIndex++, COMMENT, pos, tempPos - pos);
-					return tempPos + 1;
-				}
+	private int consumeChar() {
+		if (peek('\'')) {
+			throw error("EmptyChar");
+		} else if (peek('\\')) {
+			// '\''
+			if (peek(3, '\'')) {
+				elementData(CHAR, pos, 4);
+				return pos + 4;
+			} else {
+				throw error("InvalidEscapedChar");
 			}
-			elementData(elementIndex++, COMMENT, pos, tempPos - pos);
-			return tempPos;
 		}
-		throw error("Comment shit");
+		// 'a'
+		if (peek(2, '\'')) {
+			elementData(CHAR, pos, 3);
+			return pos + 3;
+		}
+		throw error("InvalidChar");
+	}
+
+	private int consumeWhitespace() {
+		char[] dataBuffer = this.dataBuffer;
+		int length = dataBuffer.length;
+		int tempPos = pos;
+		while (++tempPos < length && dataBuffer[tempPos] == ' ') {
+		}
+		elementData(WHITESPACE, pos, tempPos - pos);
+		return tempPos;
+	}
+
+	private int consumeComment() {
+		if (!peek('/'))
+			throw error("Comment shit");
+		int tempPos = pos + 1;
+		char[] dataBuffer = this.dataBuffer;
+		int length = dataBuffer.length;
+		while (++tempPos < length && dataBuffer[tempPos] != NEW_LINE) {
+		}
+		elementData(COMMENT, pos, tempPos - pos);
+		return tempPos;
 	}
 
 	// Useful functions
@@ -188,8 +228,8 @@ public final class LexReader {
 		return peekRaw(pos + offset, c);
 	}
 
-	private boolean peekRaw(int position, char c) {
-		return position < dataBuffer.length && dataBuffer[position] == c;
+	private boolean peekRaw(int pos, char c) {
+		return pos < dataBuffer.length && dataBuffer[pos] == c;
 	}
 
 	private boolean peek(String c) {
@@ -200,23 +240,24 @@ public final class LexReader {
 		return peekRaw(pos + offset, c);
 	}
 
-	private boolean peekRaw(int position, String c) {
+	private boolean peekRaw(int pos, String c) {
 		char[] dataBuffer = this.dataBuffer;
 		int length = c.length();
-		if (position + length < dataBuffer.length) {
+		if (pos + length < dataBuffer.length) {
 			for (int i = 0; i < length; i++)
-				if (c.charAt(i) != dataBuffer[position + i])
+				if (c.charAt(i) != dataBuffer[pos + i])
 					return false;
 			return true;
 		}
 		return false;
 	}
 
-	private void elementData(final int index, final byte type, final int position) {
-		elementData(index, type, position, 1);
+	private void elementData(final byte type) {
+		elementData(type, pos, 1);
 	}
 
-	private void elementData(final int index, final byte type, final int position, final int length) {
+	private void elementData(final byte type, final int position, final int length) {
+		int index = elementIndex++;
 		ElementBuffer elementBuffer = this.elementBuffer;
 		elementBuffer.type[index] = type;
 		elementBuffer.position[index] = position;
