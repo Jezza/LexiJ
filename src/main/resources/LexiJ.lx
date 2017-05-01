@@ -1,51 +1,83 @@
 // Implicit declarations
-alpha_lower := [a-z]
-alpha_upper := [A-Z]
-alpha := [ALPHA_LOWER|ALPHA_UPPER]
+ALPHA_LOWER = [a-z]
+ALPHA_UPPER = [A-Z]
+ALPHA = [{ALPHA_LOWER}|{ALPHA_UPPER}]
 
-NUM := [0-9]
+NUM = [0-9]
 
-HEX := [NUM|a|b|c|d|e|f|A|B|C|D|E|F]
+HEX = [{NUM}|abcdefABCDEF]
 
-ALPHA_NUM := [ALPHA|NUM]
+ALPHA_NUM = [{ALPHA}|{NUM}]
+
+// JAVA_IDENT = custom method
+// JAVA_IDENT_PART = custom method
 
 // Start of file
-name("Testing") // Generates file name: "Testing.java"
-buffers(1) // Creates 1 buffer than can be used throughout the lexer.
+name("LexiJ") // Generates file name: "LexiJ.java"
+buffers(1) // Creates 1 buffer that can be used throughout the lexer.
 
-import {
-	java.util[Objects, ArrayList]
+LINE_END = [\r|\n|\r\n]
+WHITESPACE = [ \t]
+
+ANY_CHARACTER = ^(\r\n);
+ANY_SPACE = [{LINE_END}|{WHITESPACE}]
+
+// ESCAPED_CHARACTER = \\{}
+
+LINE_COMMENT = {WHITESPACE}* "//" (^{LINE_END})*
+
+// NAMESPACE -> {ALPHA}
+// NUMBER -> {NUM}
+
+IDENTIFIER = {JIDENT} {JIDENT_PART}*
+// IDENTIFIER_REFERENCE = \{ {IDENTIFIER} \}
+IDENTIFIER_REFERENCE = "{" {IDENTIFIER} "}"
+
+$SOF {
+	package me.jezza;
 }
 
-inject {
-	static {
-		System.out.print("ASdasdasd");
-	}
+$EOF {
+	System.out.println("");
 }
 
-NAMESPACE -> alpha
-NUMBER -> num
-
-COLON_EQUAL -> ":="
-LEFT -> '['
-PIPE -> '|'
-RIGHT -> ']'
+#PIPE = "|"
+#COLON_EQUAL = ":="
+#LEFT_BRACE = "{"
+#RIGHT_BRACE = "}"
+#LEFT_BRACKET = "["
+#RIGHT_BRACKET = "]"
+#LEFT_PARENTHESES = "("
+#RIGHT_PARENTHESES = ")"
 
 initial {
- 	'"' {
- 		buffer[0].clear();
- 		start("string")
+	"//" := -> comment
+//	"//" -> comment
+
+	({ALPHA}|_)+({ALPHA_NUM}|_)* := #NAMESPACE
+//	([{ALPHA}|_])+([{ALPHA_NUM}|_])* := #NAMESPACE
+
+	{NUM} := #NUMBER;
+
+ 	"\"" := {
+ 		buffer[0].clear()
+	 	-> string
  	}
-	default {
+	EOL | EOF {
+	}
+	default := {
 		print("Fallthrough")
 	}
 }
 
 string {
-	'"' {
+	"\"" := {
 		symbol(STRING, buffer[0])
 	}
-	default {
+	default := {
 		buffer[0].append(current())
 	}
+}
+
+comment {
 }

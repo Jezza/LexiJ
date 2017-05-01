@@ -1,0 +1,39 @@
+identifier = {jident} {jident_part}*
+
+@package("me.jezza.lexij")
+@package "me.jezza.lexij"
+@package {
+	return "me.jezza.lexij";
+}
+
+@import {
+	me.jezza.lexij.lang.Tokens;
+}
+
+@start {
+
+}
+
+@ {
+
+}
+
+#define token(type, text) -> return new Token(type, text, ${pos-x}, ${pos-y})
+
+initial {
+	"@" {
+		return new Token('@', "@", ${pos-x}, ${pos-y});
+	}
+	"=" {
+    	token('=', "=");
+    }
+    "\"" {
+    	// Well, try this out.
+    }
+    * = c {
+		token(c, String.valueOf((char) c));
+    }
+}
+
+string {
+}

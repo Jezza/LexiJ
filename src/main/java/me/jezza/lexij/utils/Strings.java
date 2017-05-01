@@ -1,4 +1,4 @@
-package me.jezza.lexij.lib;
+package me.jezza.lexij.utils;
 
 import java.util.function.Function;
 
@@ -7,22 +7,9 @@ import java.util.function.Function;
  */
 public final class Strings {
 	private static final char[] OBJ_REP_CHARS = "{}".toCharArray();
-	private static final String SAFE_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNPPQRSTUVWXYZ$_1234567890";
 
 	private Strings() {
 		throw new IllegalStateException();
-	}
-
-	public static String confirmSafe(String name) {
-		if (!useable(name)) {
-			throw new IllegalArgumentException("Experiment name must not be empty: " + name);
-		}
-		for (int i = 0; i < name.length(); i++) {
-			char c = name.charAt(i);
-			if (SAFE_CHARS.indexOf(c) == -1)
-				throw new IllegalArgumentException(format("Invalid character in experiment name: \"{}\"[{}] = '{}'.", name, Integer.toString(i), Character.toString(c)));
-		}
-		return name;
 	}
 
 	public static boolean useable(CharSequence charSequence) {
